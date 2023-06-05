@@ -148,12 +148,14 @@ def generate_nodes_multiple(content, amr_nodes_content, amr_nodes_acronym):
             else:
                 arg_nodes.append(amr_nodes_content[i])
 
-    predict_event = re.search('\w+\s/\s\S+', content).group().split(' / ')
+    predict_event = re.search('(\w+)\s*/\s(\S+)', content)
     if predict_event:
-        acr = predict_event[0] # Acronym
-        ful = predict_event[1] # Full name
+        acr = predict_event.group(1) # Acronym
+        ful = predict_event.group(2) # Full name
     else:
         acr, ful = '-', '-'
+
+    #print(f"{acr} {ful}")
 
     # In case of :polarity -
     is_polarity = True if re.search(":polarity\s-", content) else False
