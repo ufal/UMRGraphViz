@@ -295,7 +295,7 @@ def main(raw_amrs):
     for i in re.split('\n\s*\n', raw_amrs):
         sent = re.search('::snt (.*?)\n', i)
         sent = sent.group(1) if sent else ''
-        sentid = re.search('::id (.*?) ', i)
+        sentid = re.search('::id (.*?)\n', i)
         if sentid:
             sentid = sentid.group(1)
         else:
