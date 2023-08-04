@@ -287,6 +287,19 @@ def amr_reader(raw_amr):
 
     return amr_nodes_acronym, path
 
+def extract_sentence(tree_str):
+    sent = re.search('::snt (.*?)\n', tree_str)  or \
+           re.search('# [Ss]entence:?\s+(.*?)\n', tree_str)
+    sent = sent.group(1) if sent else ''
+    return sent
+
+def extract_sentid(tree_str):
+    sentid = re.search('::id (.*?)\n', tree_str) or \
+             re.search('::\s+([^\s]*?)\s*\n', tree_str)
+    sentid = sentid.group(1) if sentid else uuid.uuid4()
+    return sentid
+
+
 
 def main(raw_amrs):
     '''
@@ -295,13 +308,8 @@ def main(raw_amrs):
     '''
     res = []
     for i in re.split('\n\s*\n', raw_amrs):
-        sent = re.search('::snt (.*?)\n', i)
-        sent = sent.group(1) if sent else ''
-        sentid = re.search('::id (.*?)\n', i)
-        if sentid:
-            sentid = sentid.group(1)
-        else:
-            sentid = uuid.uuid4()
+        sent = extract_sentence(i)
+        sentid = extract_sentid(i)
 
         raw_amr = ''
         comments = ''
