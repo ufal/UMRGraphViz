@@ -91,27 +91,27 @@ def visualizer_curt(sen, outdir, show_wiki=True):
         if i == '@': # Root
             continue
         node = sen.amr_nodes[i]
-        pol = ''
-        if node.polarity:
-            pol = '\n- polarity'
         if node.ful_name:
+            label = '<<TABLE BORDER="0" CELLBORDER="0">'
+            label += f'<TR><TD COLSPAN="2"><B>{node.ful_name}</B></TD></TR>'
+            if node.is_entity:
+                label += f'<TR><TD ALIGN="RIGHT">:name</TD><TD ALIGN="LEFT">{node.entity_name}</TD></TR>'
+                if show_wiki and node.wiki:
+                    label += f'<TR><TD ALIGN="RIGHT">:wiki</TD><TD ALIGN="LEFT">{node.wiki}</TD></TR>'
+            if node.polarity:
+                label += '<TR><TD COLSPAN="2">- polarity</TD></TR>'
+            for k,v in node.attrs.items():
+                label += f'<TR><TD ALIGN="RIGHT">{k}</TD><TD ALIGN="LEFT">{v}</TD></TR>'
+            label += '</TABLE>>'
             # 1. Node is a named entity
             if node.is_entity:
-                if show_wiki:
-                    ne_name = '%s\nwiki: %s' % (node.entity_name, node.wiki)
-                else:
-                    ne_name = '%s\n' % node.entity_name
-                G.add_node(i, shape='box', color='blue',
-                           label=node.ful_name + '\n' + ne_name + pol)
+                G.add_node(i, shape='box', color='blue', label=label)
             # 2. Node is an instance
             else:
-                full_name = '%s' % node.ful_name
-                if re.match('\S+-\d+', full_name): # Node has sense tag
-                    G.add_node(i, shape='egg', color='orange',
-                               label=full_name + pol)
+                if re.match('\S+-\d+', node.ful_name): # Node has sense tag
+                    G.add_node(i, shape='egg', color='orange', label=label)
                 else:
-                    G.add_node(i, shape='egg', color='green',
-                               label=full_name + pol)
+                    G.add_node(i, shape='egg', color='green', label=label)
         # 3. Node is a concept
         else:
             G.add_node(i, shape='ellipse', color='black')

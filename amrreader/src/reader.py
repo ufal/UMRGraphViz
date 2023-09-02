@@ -52,6 +52,13 @@ def split_amr(raw_amr, contents):
         split_amr(raw_amr, contents)
 
 
+def collect_acronyms(content, amr_nodes_acronym):
+    predict_event = re.search('(\w+)\s/\s(\S+)', content)
+    if predict_event:
+        acr = predict_event.group(1) # Acronym
+        ful = predict_event.group(2).strip(')') # Full name
+    amr_nodes_acronym[acr] = None
+
 def generate_node_single(content, amr_nodes_content, amr_nodes_acronym):
     '''
     Generate Node object for single '()'
@@ -75,7 +82,9 @@ def generate_node_single(content, amr_nodes_content, amr_nodes_acronym):
     # In case of :polarity -
     is_polarity = True if re.search(":polarity\s-", content) else False
 
-    # :ARG ndoes
+    # :ARG nodes
+    # keep in attrs if nodes is not an acronym
+    attrs = {}
     arg_nodes = []
     nodes = re.findall(':\S+\s\S+', content)
     for i in nodes:
@@ -87,12 +96,14 @@ def generate_node_single(content, amr_nodes_content, amr_nodes_acronym):
         if role == ':polarity':
             continue
         if concept in amr_nodes_acronym:
+            if amr_nodes_acronym[concept] is None:
+                continue
             node = copy.copy(amr_nodes_acronym[concept])
             node.next_nodes = []
         # In case of (d / date-entity :year 2012)
         else:
-            node = Node(name=concept)
-            amr_nodes_acronym[concept] = node
+            attrs[role] = concept
+            continue
         node.edge_label = role
         arg_nodes.append(node)
 
@@ -105,12 +116,12 @@ def generate_node_single(content, amr_nodes_content, amr_nodes_acronym):
         entity_name = urllib.parse.unquote_plus(entity_name.strip())
         new_node = Node(name=acr, ful_name=ful, next_nodes=arg_nodes,
                         entity_name=entity_name,
-                        polarity=is_polarity, content=content)
+                        polarity=is_polarity, content=content, attrs=attrs)
         amr_nodes_content[content] = new_node
         amr_nodes_acronym[acr] = new_node
     else:
         new_node = Node(name=acr, ful_name=ful, next_nodes=arg_nodes,
-                        polarity=is_polarity, content=content)
+                        polarity=is_polarity, content=content, attrs=attrs)
         amr_nodes_content[content] = new_node
         amr_nodes_acronym[acr] = new_node
 
@@ -160,6 +171,7 @@ def generate_nodes_multiple(content, amr_nodes_content, amr_nodes_acronym):
     # In case of :polarity -
     is_polarity = True if re.search(":polarity\s-", content) else False
 
+    attrs = {}
     nodes = re.findall(':\S+\s\S+', content)
     for i in nodes:
         i = re.search('(:\S+)\s(\S+)', i)
@@ -170,12 +182,14 @@ def generate_nodes_multiple(content, amr_nodes_content, amr_nodes_acronym):
         if role == ':polarity':
             continue
         if concept in amr_nodes_acronym:
+            if amr_nodes_acronym[concept] is None:
+                continue
             node = copy.copy(amr_nodes_acronym[concept])
             node.next_nodes = []
         # In case of (d / date-entity :year 2012)
         else:
-            node = Node(name=concept)
-            amr_nodes_acronym[concept] = node
+            attrs[role] = concept
+            continue
         node.edge_label = role
         arg_nodes.append(node)
 
@@ -204,13 +218,13 @@ def generate_nodes_multiple(content, amr_nodes_content, amr_nodes_acronym):
         new_node = Node(name=acr, ful_name=ful, next_nodes=arg_nodes,
                         edge_label=ne.ful_name, is_entity=True,
                         entity_type=ful, entity_name=ne.entity_name,
-                        wiki=wikititle, polarity=is_polarity, content=content)
+                        wiki=wikititle, polarity=is_polarity, content=content, attrs=attrs)
         amr_nodes_content[_content] = new_node
         amr_nodes_acronym[acr] = new_node
 
     elif len(arg_nodes) > 0:
         new_node = Node(name=acr, ful_name=ful, next_nodes=arg_nodes,
-                        polarity=is_polarity, content=content)
+                        polarity=is_polarity, content=content, attrs=attrs)
         amr_nodes_content[_content] = new_node
         amr_nodes_acronym[acr] = new_node
 
@@ -229,6 +243,7 @@ def revise_node(content, amr_nodes_content, amr_nodes_acronym):
         arg_nodes = []
         acr = re.search('\w+\s/\s\S+', content).group().split(' / ')[0]
         nodes = re.findall('\S+\s\".+\"|\S+\s\S+', m.group(1))
+        attrs = {}
         for i in nodes:
             i = re.search('(:\S+)\s(.+)', i)
             role = i.group(1)
@@ -237,8 +252,8 @@ def revise_node(content, amr_nodes_content, amr_nodes_acronym):
                 node = copy.copy(amr_nodes_acronym[concept])
                 node.next_nodes = []
             else: # in case of (d / date-entity :year 2012)
-                node = Node(name=concept)
-                amr_nodes_acronym[concept] = node
+                attrs[role] = concept
+                continue
             node.edge_label = role
             arg_nodes.append(node)
         amr_nodes_acronym[acr].next_nodes = arg_nodes
@@ -271,6 +286,11 @@ def amr_reader(raw_amr):
     path = [] # Nodes path
 
     split_amr(raw_amr, [])
+
+    # collect acronyms
+    for i in amr_contents:
+        collect_acronyms(i, amr_nodes_acronym)
+
     for i in amr_contents:
         if i.count('(') == 1 and i.count(')') == 1:
             generate_node_single(i, amr_nodes_content, amr_nodes_acronym)
