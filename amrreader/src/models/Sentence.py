@@ -1,14 +1,16 @@
 '''
- AMR Sentence Object
+ UMR Sentence Object
 '''
 
 class Sentence(object):
-    def __init__(self, sentid='', sent='', raw_amr='', comments='',
+    def __init__(self, sentid='', sent='', raw_umr='',
+                 sent_umr='', comments='',
                  amr_nodes=dict(), graph=list()):
         self.sentid = sentid         # Sentence id
         self.sent = sent             # Sentence
-        self.raw_amr = raw_amr       # Raw AMR
+        self.raw_umr = raw_umr       # Full raw UMR
         self.comments = comments     # Comments
+        self.sent_umr = sent_umr     # Sent part of UMR
         self.amr_nodes = amr_nodes   # AMR ndoes table
         self.graph = graph           # Path of the whole graph
         self.amr_paths = dict()      # AMR paths

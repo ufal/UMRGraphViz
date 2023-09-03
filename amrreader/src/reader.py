@@ -10,22 +10,6 @@ from .models.Node import Node
 from .models.Sentence import Sentence
 
 
-def amr_validator(raw_amr): # TODO: add more test cases
-    '''
-    AMR validator
-
-    :param str raw_amr:
-    :return bool:
-    '''
-    if raw_amr.count('(') == 0:
-        return False
-    if raw_amr.count(')') == 0:
-        return False
-    if raw_amr.count('(') != raw_amr.count(')'):
-        return False
-    return True
-
-
 def split_amr(raw_amr, contents):
     '''
     Split raw AMR based on '()'
@@ -53,11 +37,10 @@ def split_amr(raw_amr, contents):
 
 
 def collect_acronyms(content, amr_nodes_acronym):
-    predict_event = re.search('(\w+)\s/\s(\S+)', content)
+    predict_event = re.search('(\w+)\s*/\s\S+', content)
     if predict_event:
         acr = predict_event.group(1) # Acronym
-        ful = predict_event.group(2).strip(')') # Full name
-    amr_nodes_acronym[acr] = None
+        amr_nodes_acronym[acr] = None
 
 def generate_node_single(content, amr_nodes_content, amr_nodes_acronym):
     '''
@@ -72,7 +55,7 @@ def generate_node_single(content, amr_nodes_content, amr_nodes_acronym):
     except AssertionError:
         raise Exception('Unmatched parenthesis')
 
-    predict_event = re.search('(\w+)\s/\s(\S+)', content)
+    predict_event = re.search('(\w+)\s*/\s(\S+)', content)
     if predict_event:
         acr = predict_event.group(1) # Acronym
         ful = predict_event.group(2).strip(')') # Full name
@@ -307,19 +290,33 @@ def amr_reader(raw_amr):
 
     return amr_nodes_acronym, path
 
-def extract_sentence(tree_str):
-    sent = re.search('::snt (.*?)\n', tree_str)  or \
-           re.search('# [Ss]entence:?\s+(.*?)\n', tree_str)
-    sent = sent.group(1) if sent else ''
+def extract_sentence(line):
+    sent = re.search('^\#?\s*::\s*[^\s]+\s*(.*)$', line) or \
+           re.search('^\#?\s*[Ss]entence:?\s+(.*)$', line)
+    # TODO: parse sents in Arapaho
+    sent = sent.group(1) if sent else None
     return sent
 
-def extract_sentid(tree_str):
-    sentid = re.search('::id (.*?)\n', tree_str) or \
-             re.search('::\s+([^\s]*?)\s*\n', tree_str)
-    sentid = sentid.group(1) if sentid else uuid.uuid4()
+def extract_sentid(line):
+    sentid = re.search('^\#?\s*::id (.*?)$', line) or \
+             re.search('^\#?\s*::\s+([^\s]+)', line)
+    sentid = sentid.group(1) if sentid else None
     return sentid
 
-
+def detect_graph(line, stack_count):
+    if stack_count is None:
+        if not line.startswith('('):
+            return None
+        else:
+            stack_count = 0
+    for m in re.finditer("[()]", line):
+        if m.group(0) == "(":
+            stack_count += 1
+        elif stack_count > 0:
+            stack_count -= 1
+        else:
+            raise Exception("Incorrect bracketing in the UMR structure.")
+    return stack_count
 
 def main(raw_amrs):
     '''
@@ -327,38 +324,65 @@ def main(raw_amrs):
     :return list res: Sentence objects
     '''
     res = []
-    for i in re.split('\n\s*\n', raw_amrs):
-        sent = extract_sentence(i)
-        sentid = extract_sentid(i)
+    sentid, sent, raw_umr, sent_umr, doc_umr, comments = None, None, '', '', '', ''
+    sent_stack_count, doc_stack_count = None, None
+    curr_umr = ''
+    for line in raw_amrs.split('\n'):
 
-        raw_amr = ''
-        comments = ''
-        for line in i.splitlines(True):
-            if line.startswith('# '):
-                comments += line
+        # try to extract sentid
+        # only if any bracketed graph is either not open yet (is None) or is already closed (=0)
+        if not sent_stack_count and not doc_stack_count:
+            l_sentid = extract_sentid(line)
+            if l_sentid:
+                if sentid:
+                    amr_nodes_acronym, path = amr_reader(sent_umr)
+                    sent_obj = Sentence(sentid, sent, raw_umr, comments, sent_umr,
+                                    amr_nodes_acronym, path)
+                    res.append(sent_obj)
+                sentid, sent, raw_umr, sent_umr, doc_umr, comments = l_sentid, None, '', '', '', ''
+                sent_stack_count, doc_stack_count = None, None
+
+        # skip all lines until the first sentid is defined
+        if not sentid:
+            continue
+
+        #print(sentid)
+
+        raw_umr += line
+
+        # try to extract sentence, if not already set
+        # only if any bracketed graph is either not open yet (is None) or is already closed (=0)
+        if not sent and not sent_stack_count and not doc_stack_count:
+            sent = extract_sentence(line)
+
+        if line.startswith('# '):
+            comments += line
+            continue
+
+        # detect bracketed structure of a sent graph
+        # sent_stack_count == 0 => full graph already parsed
+        if sent_stack_count != 0:
+            sent_stack_count = detect_graph(line, sent_stack_count)
+            if sent_stack_count is None:
+                continue
+            sent_umr += line + "\n"
+            if sent_stack_count > 0:
                 continue
 
-            # convert '( )' to '%28 %29' in :wiki
-            m = re.search(':wiki\s\"(.+?)\"', line)
-            if m:
-                line = line.replace(m.group(1),
-                                    urllib.parse.quote_plus(m.group(1)))
+        # detect bracketed structure of a doc graph
+        # doc_stack_count == 0 => full graph already parsed
+        if doc_stack_count != 0:
+            doc_stack_count = detect_graph(line, doc_stack_count)
+            if doc_stack_count is None:
+                continue
+            doc_umr += line + "\n"
+            if doc_stack_count > 0:
+                continue
 
-            # convert '( )' to '%28 %29' in :name
-            m = re.findall('\"(\S+)\"', line)
-            for i in m:
-                if '(' in i or ')' in i:
-                    line = line.replace(i, urllib.parse.quote_plus(i))
-            raw_amr += line
-
-        if not raw_amr:
-            continue
-        if not amr_validator(raw_amr):
-            raise Exception('Invalid raw AMR: %s' % sentid)
-
-        amr_nodes_acronym, path = amr_reader(raw_amr)
-        sent_obj = Sentence(sentid, sent, raw_amr, comments,
-                            amr_nodes_acronym, path)
+    if sentid:
+        amr_nodes_acronym, path = amr_reader(sent_umr)
+        sent_obj = Sentence(sentid, sent, raw_umr, comments, sent_umr,
+                        amr_nodes_acronym, path)
         res.append(sent_obj)
 
     return res
