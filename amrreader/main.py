@@ -35,9 +35,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
     indir = args.indir
     outdir = args.outdir
-    os.makedirs(outdir, exist_ok=True)
 
     for i in os.listdir(indir):
+        if not i.endswith(".txt") and not i.endswith(".umr"):
+            continue
         logger.info('processing %s' % i)
         raw_amrs = open('%s/%s' % (indir, i), 'r').read()
 
@@ -45,24 +46,27 @@ if __name__ == '__main__':
         sents = reader.main(raw_amrs)
         ne.add_named_entity(sents)
 
+        outdir_i = f'{outdir}/{i}'
+        os.makedirs(outdir_i, exist_ok=True)
+
         if args.graph == 'n':
-            producer.get_graph(sents, outdir)
+            producer.get_graph(sents, outdir_i)
 
         if args.graph == 's':
-            producer.get_graph(sents, outdir, curt=True)
+            producer.get_graph(sents, outdir_i, curt=True)
 
         if args.node:
-            producer.get_node(sents, outdir)
+            producer.get_node(sents, outdir_i)
 
         if args.entity:
-            producer.get_namedentity(sents, outdir)
+            producer.get_namedentity(sents, outdir_i)
 
         if args.path:
             path.main(sents)
-            producer.get_path(sents, outdir)
+            producer.get_path(sents, outdir_i)
 
         if args.visualization == 'n':
-            producer.get_html(sents, 'visualization', outdir)
+            producer.get_html(sents, 'visualization', outdir_i)
 
         if args.visualization == 's':
-            producer.get_html(sents, 'visualization', outdir, curt=True)
+            producer.get_html(sents, 'visualization', outdir_i, curt=True)
