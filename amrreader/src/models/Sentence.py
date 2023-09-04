@@ -4,7 +4,7 @@
 
 class Sentence(object):
     def __init__(self, sentid='', sent='', raw_umr='',
-                 sent_umr='', comments='',
+                 sent_umr='', comments=[],
                  amr_nodes=dict(), graph=list()):
         self.sentid = sentid         # Sentence id
         self.sent = sent             # Sentence
@@ -17,4 +17,4 @@ class Sentence(object):
         self.named_entities = dict() # Named entities
 
     def __str__(self):
-        return '%s%s\n' % (self.comments, self.raw_amr)
+        return '%s%s\n' % (self.comments, self.sent_umr)

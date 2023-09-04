@@ -324,7 +324,7 @@ def main(raw_amrs):
     :return list res: Sentence objects
     '''
     res = []
-    sentid, sent, raw_umr, sent_umr, doc_umr, comments = None, None, '', '', '', ''
+    sentid, sent, raw_umr, sent_umr, doc_umr, comments = None, None, '', '', '', []
     sent_stack_count, doc_stack_count = None, None
     curr_umr = ''
     for line in raw_amrs.split('\n'):
@@ -336,10 +336,10 @@ def main(raw_amrs):
             if l_sentid:
                 if sentid:
                     amr_nodes_acronym, path = amr_reader(sent_umr)
-                    sent_obj = Sentence(sentid, sent, raw_umr, comments, sent_umr,
+                    sent_obj = Sentence(sentid, sent, raw_umr, sent_umr, comments,
                                     amr_nodes_acronym, path)
                     res.append(sent_obj)
-                sentid, sent, raw_umr, sent_umr, doc_umr, comments = l_sentid, None, '', '', '', ''
+                sentid, sent, raw_umr, sent_umr, doc_umr, comments = l_sentid, None, '', '', '', []
                 sent_stack_count, doc_stack_count = None, None
 
         # skip all lines until the first sentid is defined
@@ -348,7 +348,7 @@ def main(raw_amrs):
 
         #print(sentid)
 
-        raw_umr += line
+        raw_umr += line + "\n"
 
         # try to extract sentence, if not already set
         # only if any bracketed graph is either not open yet (is None) or is already closed (=0)
@@ -356,7 +356,7 @@ def main(raw_amrs):
             sent = extract_sentence(line)
 
         if line.startswith('# '):
-            comments += line
+            comments.append(line)
             continue
 
         # detect bracketed structure of a sent graph
@@ -381,7 +381,7 @@ def main(raw_amrs):
 
     if sentid:
         amr_nodes_acronym, path = amr_reader(sent_umr)
-        sent_obj = Sentence(sentid, sent, raw_umr, comments, sent_umr,
+        sent_obj = Sentence(sentid, sent, raw_umr, sent_umr, comments,
                         amr_nodes_acronym, path)
         res.append(sent_obj)
 

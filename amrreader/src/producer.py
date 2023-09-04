@@ -4,25 +4,27 @@ import os
 def html_get_ne(ne):
     name = '<b>%s</b> ---> <code>%s</code> <br>' % \
            (ne.entity_name, ne.wiki)
-    coreference = '&nbsp;<i>Coref. name: </i><code>%s</code><br>' % \
-                  ne.coreference
-    neighbors = '&nbsp;<i>Neighbors:&nbsp;&nbsp;&nbsp; </i> <code>'
-    for i in ne.neighbors:
-        neighbors += '%s ' % str(i)
-    neighbors += '</code><br>'
-    coherence = '&nbsp;<i>Coheret set:&nbsp </i> <code>'
-    for i in ne.coherence:
-        coherence += '(%s, %s, %s) ' % (i[0], i[1], i[2].entity_name)
-    coherence += '</code><br>'
-    return '%s\n%s\n%s\n%s\n<br>' % (name, coreference, neighbors, coherence)
+    #coreference = '&nbsp;<i>Coref. name: </i><code>%s</code><br>' % \
+    #              ne.coreference
+    #neighbors = '&nbsp;<i>Neighbors:&nbsp;&nbsp;&nbsp; </i> <code>'
+    #for i in ne.neighbors:
+    #    neighbors += '%s ' % str(i)
+    #neighbors += '</code><br>'
+    #coherence = '&nbsp;<i>Coheret set:&nbsp </i> <code>'
+    #for i in ne.coherence:
+    #    coherence += '(%s, %s, %s) ' % (i[0], i[1], i[2].entity_name)
+    #coherence += '</code><br>'
+    #return '%s\n%s\n%s\n%s\n<br>' % (name, coreference, neighbors, coherence)
+    return name
 
 
 def html_get_sentence(sent):
     graph = '<img src="./graphs/%s.png">' % sent.sentid
     senid = '<h2>%s</h2>' % sent.sentid
-    comments = '<p><b>%s</b></p>' % sent.comments.split('\n')[0]
+    comments = '<p><code>%s</code></p>' % "<br/>".join(sent.comments[:-2]) \
+          .replace(' ', '&nbsp;')
     sentence = '<p><b>%s</b></p>' % sent.sent
-    amr = '<p><code>%s</code></p>' % sent.raw_amr \
+    amr = '<p><code>%s</code></p>' % sent.sent_umr \
           .replace('\n', '<br>') \
           .replace(' ', '&nbsp;')
     nes = '<button type="button" onclick="toggle_visibility(\'%s\');"><b>' \
@@ -32,7 +34,7 @@ def html_get_sentence(sent):
         nes += html_get_ne(sent.named_entities[i])
     nes += '</div>'
     return '<body>\n%s\n%s\n%s\n%s\n%s\n%s\n</body>\n' % \
-        (senid, sentence, amr, comments, nes, graph)
+        (senid, sentence, comments, amr, nes, graph)
 
 
 def get_html(sents, filename, outdir, curt=False):
