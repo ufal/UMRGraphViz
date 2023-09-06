@@ -21,7 +21,8 @@ def html_get_ne(ne):
 def html_get_sentence(sent):
     graph = '<img src="./graphs/%s.png">' % sent.sentid
     senid = '<h2>%s</h2>' % sent.sentid
-    comments = '<p><code>%s</code></p>' % "<br/>".join(sent.comments[:-2]) \
+    sent_info = '<p><code>%s</code></p>' % sent.sent_info \
+          .replace('\n', '<br>') \
           .replace(' ', '&nbsp;')
     sentence = '<p><b>%s</b></p>' % sent.sent
     amr = '<p><code>%s</code></p>' % sent.sent_umr \
@@ -34,7 +35,7 @@ def html_get_sentence(sent):
         nes += html_get_ne(sent.named_entities[i])
     nes += '</div>'
     return '<body>\n%s\n%s\n%s\n%s\n%s\n%s\n</body>\n' % \
-        (senid, sentence, comments, amr, nes, graph)
+        (senid, sentence, sent_info, amr, nes, graph)
 
 
 def get_html(sents, filename, outdir, curt=False):

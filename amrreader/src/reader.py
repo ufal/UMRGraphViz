@@ -292,9 +292,11 @@ def amr_reader(raw_amr):
 
 def extract_sentence(line):
     sent = re.search('^\#?\s*::\s*[^\s]+\s*(.*)$', line) or \
-           re.search('^\#?\s*[Ss]entence:?\s+(.*)$', line)
+           re.search('^\#?\s*[Ss]entence:?\s+(.*)$', line) or \
+           re.search('^\#?\s*[Ww]ords:?\s+(.*)$', line) or \
+           re.search('^\#?\s*tx:?\s+(.*)$', line)
     # TODO: parse sents in Arapaho
-    sent = sent.group(1) if sent else None
+    sent = re.sub('\s+', ' ', sent.group(1)) if sent else None
     return sent
 
 def extract_sentid(line):
@@ -324,9 +326,10 @@ def main(raw_amrs):
     :return list res: Sentence objects
     '''
     res = []
-    sentid, sent, raw_umr, sent_umr, doc_umr, comments = None, None, '', '', '', []
+    sentid, sent, sent_info = None, None, ''
+    raw_umr, sent_umr, doc_umr = '', '', ''
     sent_stack_count, doc_stack_count = None, None
-    curr_umr = ''
+    sent_info_block = False
     for line in raw_amrs.split('\n'):
 
         # try to extract sentid
@@ -336,11 +339,13 @@ def main(raw_amrs):
             if l_sentid:
                 if sentid:
                     amr_nodes_acronym, path = amr_reader(sent_umr)
-                    sent_obj = Sentence(sentid, sent, raw_umr, sent_umr, comments,
+                    sent_obj = Sentence(sentid, sent, sent_info, raw_umr, sent_umr,
                                     amr_nodes_acronym, path)
                     res.append(sent_obj)
-                sentid, sent, raw_umr, sent_umr, doc_umr, comments = l_sentid, None, '', '', '', []
+                sentid, sent, sent_info = l_sentid, None, ''
+                raw_umr, sent_umr, doc_umr = '', '', ''
                 sent_stack_count, doc_stack_count = None, None
+                sent_info_block = True
 
         # skip all lines until the first sentid is defined
         if not sentid:
@@ -350,14 +355,15 @@ def main(raw_amrs):
 
         raw_umr += line + "\n"
 
-        # try to extract sentence, if not already set
-        # only if any bracketed graph is either not open yet (is None) or is already closed (=0)
-        if not sent and not sent_stack_count and not doc_stack_count:
-            sent = extract_sentence(line)
-
-        if line.startswith('# '):
-            comments.append(line)
-            continue
+        # store the sentence info block
+        if sent_info_block:
+            if not line.rstrip():
+                sent_info_block = False
+                continue
+            # try to extract sentence, if not already set
+            if not sent:
+                sent = extract_sentence(line)
+            sent_info += line + "\n"
 
         # detect bracketed structure of a sent graph
         # sent_stack_count == 0 => full graph already parsed
@@ -381,7 +387,7 @@ def main(raw_amrs):
 
     if sentid:
         amr_nodes_acronym, path = amr_reader(sent_umr)
-        sent_obj = Sentence(sentid, sent, raw_umr, sent_umr, comments,
+        sent_obj = Sentence(sentid, sent, sent_info, raw_umr, sent_umr,
                         amr_nodes_acronym, path)
         res.append(sent_obj)
 
