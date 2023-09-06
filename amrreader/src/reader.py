@@ -133,7 +133,7 @@ def generate_nodes_multiple(content, amr_nodes_content, amr_nodes_acronym):
         if i in content:
             e = content.find(i)
             s = content[:e].rfind(':')
-            role = re.search(':\S+\s', content[s:e]).group() # Edge label
+            role = re.search(':\S+\s*', content[s:e]).group() # Edge label
             content = content.replace(role+i, '', 1)
             amr_nodes_content[i].edge_label = role.strip()
             if ':name' in role:
