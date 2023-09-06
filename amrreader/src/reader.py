@@ -307,10 +307,7 @@ def extract_sentid(line):
 
 def detect_graph(line, stack_count):
     if stack_count is None:
-        if not line.startswith('('):
-            return None
-        else:
-            stack_count = 0
+        stack_count = 0
     for m in re.finditer("[()]", line):
         if m.group(0) == "(":
             stack_count += 1
@@ -337,7 +334,7 @@ def main(raw_amrs):
         if not sent_stack_count and not doc_stack_count:
             l_sentid = extract_sentid(line)
             if l_sentid:
-                if sentid:
+                if sentid and sent_umr:
                     amr_nodes_acronym, path = amr_reader(sent_umr)
                     sent_obj = Sentence(sentid, sent, sent_info, raw_umr, sent_umr,
                                     amr_nodes_acronym, path)
@@ -366,26 +363,30 @@ def main(raw_amrs):
             sent_info += line + "\n"
 
         # detect bracketed structure of a sent graph
+        # skip if the sent graph hasn't started yet
+        if sent_stack_count is None and not line.startswith('('):
+            continue
         # sent_stack_count == 0 => full graph already parsed
         if sent_stack_count != 0:
-            sent_stack_count = detect_graph(line, sent_stack_count)
-            if sent_stack_count is None:
-                continue
-            sent_umr += line + "\n"
+            graph_line = re.sub('#.*', '', line)
+            sent_stack_count = detect_graph(graph_line, sent_stack_count)
+            sent_umr += graph_line + "\n"
             if sent_stack_count > 0:
                 continue
 
         # detect bracketed structure of a doc graph
+        # skip if the doc graph hasn't started yet
+        if doc_stack_count is None and not line.startswith('('):
+            continue
         # doc_stack_count == 0 => full graph already parsed
         if doc_stack_count != 0:
-            doc_stack_count = detect_graph(line, doc_stack_count)
-            if doc_stack_count is None:
-                continue
-            doc_umr += line + "\n"
+            graph_line = re.sub('#.*', '', line)
+            doc_stack_count = detect_graph(graph_line, doc_stack_count)
+            doc_umr += graph_line + "\n"
             if doc_stack_count > 0:
                 continue
 
-    if sentid:
+    if sentid and sent_umr:
         amr_nodes_acronym, path = amr_reader(sent_umr)
         sent_obj = Sentence(sentid, sent, sent_info, raw_umr, sent_umr,
                         amr_nodes_acronym, path)
