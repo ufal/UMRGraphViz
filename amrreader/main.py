@@ -39,8 +39,10 @@ if __name__ == '__main__':
     for i in os.listdir(indir):
         if not i.endswith(".txt") and not i.endswith(".umr"):
             continue
+        if "SZ" in i:
+            continue
         logger.info('processing %s' % i)
-        raw_amrs = open('%s/%s' % (indir, i), 'r').read()
+        raw_amrs = open(os.path.join(indir, i), 'r').read()
 
         # Read raw AMR and add named entities
         sents = reader.main(raw_amrs)
