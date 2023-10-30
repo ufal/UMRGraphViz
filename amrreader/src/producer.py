@@ -1,4 +1,5 @@
 import os
+import base64
 
 
 def html_get_ne(ne):
@@ -18,8 +19,11 @@ def html_get_ne(ne):
     return name
 
 
-def html_get_sentence(sent):
+def html_get_sentence(sent, graph_dir, ipython=False):
     graph = '<img src="./graphs/%s.png">' % sent.sentid
+    if ipython:
+        encoded = base64.b64encode(open(f"{graph_dir}/{sent.sentid}.png", "rb").read())
+        graph = f"<img src=\"data:image/png;base64,{encoded.decode('utf-8')}\">"
     senid = '<h2>%s</h2>' % sent.sentid
     sent_info = '<p><code>%s</code></p>' % sent.sent_info \
           .replace('\n', '<br>') \
@@ -38,7 +42,7 @@ def html_get_sentence(sent):
         (senid, sentence, sent_info, amr, nes, graph)
 
 
-def get_html(sents, filename, outdir, curt=False):
+def get_html(sents, filename, outdir, curt=False, ipython=False):
     from src import visualizer
     with open('%s/%s.html' % (outdir, filename), 'w') as fw:
         graph_dir = '%s/%s' % (outdir, 'graphs')
@@ -51,7 +55,7 @@ def get_html(sents, filename, outdir, curt=False):
                 visualizer.visualizer_curt(snt, graph_dir)
             else:
                 visualizer.visualizer(snt, graph_dir)
-            fw.write(html_get_sentence(snt))
+            fw.write(html_get_sentence(snt, graph_dir, ipython))
 
 
 def get_graph(sents, outdir, curt=False):

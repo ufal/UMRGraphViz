@@ -31,6 +31,8 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--visualization',
                         help='generate html visualization \
                         -v=n standard graphs -v=s: simplified graphs', type=str)
+    parser.add_argument('--ipython',
+                        help='the generated content will be rendered with IPython', action='store_true')
 
     args = parser.parse_args()
     indir = args.indir
@@ -71,4 +73,4 @@ if __name__ == '__main__':
             producer.get_html(sents, 'visualization', outdir_i)
 
         if args.visualization == 's':
-            producer.get_html(sents, 'visualization', outdir_i, curt=True)
+            producer.get_html(sents, 'visualization', outdir_i, curt=True, ipython=args.ipython)
