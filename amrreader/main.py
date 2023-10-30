@@ -44,7 +44,7 @@ if __name__ == '__main__':
         if "SZ" in i:
             continue
         logger.info('processing %s' % i)
-        raw_amrs = open(os.path.join(indir, i), 'r').read()
+        raw_amrs = open(os.path.join(indir, i), 'r', encoding="utf8").read()
 
         # Read raw AMR and add named entities
         sents = reader.main(raw_amrs)
