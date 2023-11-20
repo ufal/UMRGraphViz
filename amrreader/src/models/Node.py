@@ -6,6 +6,12 @@ class Node(object):
     def __init__(self, name='', ful_name='', next_nodes=[], edge_label='',
                  is_entity=False, entity_type='', entity_name='', wiki='',
                  polarity=False, content='', attrs={}):
+        self.set_all(name, ful_name, next_nodes, edge_label, is_entity,
+                 entity_type, entity_name, wiki, polarity, content, attrs)
+
+    def set_all(self, name='', ful_name='', next_nodes=[], edge_label='',
+                 is_entity=False, entity_type='', entity_name='', wiki='',
+                 polarity=False, content='', attrs={}):
         self.name = name               # Node name (acronym)
         self.ful_name = ful_name       # Full name of the node
         self.next_nodes = next_nodes   # Next nodes (list)
@@ -17,6 +23,7 @@ class Node(object):
         self.polarity = polarity       # Whether the node is polarity
         self.content = content         # Original content
         self.attrs = attrs             # Key:Value attributes
+        return
 
     def __str__(self):
         if not self.ful_name:

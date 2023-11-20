@@ -40,7 +40,8 @@ def collect_acronyms(content, amr_nodes_acronym):
     predict_event = re.search('(\w+)\s*/\s\S+', content)
     if predict_event:
         acr = predict_event.group(1) # Acronym
-        amr_nodes_acronym[acr] = None
+        if acr not in amr_nodes_acronym:
+            amr_nodes_acronym[acr] = Node(name=acr)
 
 def generate_node_single(content, amr_nodes_content, amr_nodes_acronym):
     '''
@@ -97,13 +98,15 @@ def generate_node_single(content, amr_nodes_content, amr_nodes_acronym):
         for i in names:
             entity_name += re.match(':op\d\s\"(\S+)\"', i).group(1) + ' '
         entity_name = urllib.parse.unquote_plus(entity_name.strip())
-        new_node = Node(name=acr, ful_name=ful, next_nodes=arg_nodes,
+        new_node = amr_nodes_acronym[acr]
+        new_node.set_all(name=acr, ful_name=ful, next_nodes=arg_nodes,
                         entity_name=entity_name,
                         polarity=is_polarity, content=content, attrs=attrs)
         amr_nodes_content[content] = new_node
         amr_nodes_acronym[acr] = new_node
     else:
-        new_node = Node(name=acr, ful_name=ful, next_nodes=arg_nodes,
+        new_node = amr_nodes_acronym[acr]
+        new_node.set_all(name=acr, ful_name=ful, next_nodes=arg_nodes,
                         polarity=is_polarity, content=content, attrs=attrs)
         amr_nodes_content[content] = new_node
         amr_nodes_acronym[acr] = new_node
@@ -198,7 +201,8 @@ def generate_nodes_multiple(content, amr_nodes_content, amr_nodes_acronym):
             else:
                 wikititle = '' # There is no Wiki title information
 
-        new_node = Node(name=acr, ful_name=ful, next_nodes=arg_nodes,
+        new_node = amr_nodes_acronym[acr]
+        new_node.set_all(name=acr, ful_name=ful, next_nodes=arg_nodes,
                         edge_label=ne.ful_name, is_entity=True,
                         entity_type=ful, entity_name=ne.entity_name,
                         wiki=wikititle, polarity=is_polarity, content=content, attrs=attrs)
@@ -206,7 +210,8 @@ def generate_nodes_multiple(content, amr_nodes_content, amr_nodes_acronym):
         amr_nodes_acronym[acr] = new_node
 
     elif len(arg_nodes) > 0:
-        new_node = Node(name=acr, ful_name=ful, next_nodes=arg_nodes,
+        new_node = amr_nodes_acronym[acr]
+        new_node.set_all(name=acr, ful_name=ful, next_nodes=arg_nodes,
                         polarity=is_polarity, content=content, attrs=attrs)
         amr_nodes_content[_content] = new_node
         amr_nodes_acronym[acr] = new_node
