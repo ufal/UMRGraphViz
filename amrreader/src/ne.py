@@ -39,5 +39,5 @@ def add_named_entity(sents):
                 ne_obj = NamedEntity(sentid=snt.sentid, name=node.name,
                                      entity_name=node.entity_name,
                                      subtype=node.entity_type,
-                                     maintype=maintype, wiki=node.wiki)
+                                     maintype=maintype, wiki=node.wikititle)
                 snt.named_entities[node.name] = ne_obj

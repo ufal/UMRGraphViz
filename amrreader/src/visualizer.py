@@ -96,8 +96,11 @@ def visualizer_curt(sen, outdir, show_wiki=True):
             label += f'<TR><TD COLSPAN="2"><B>{node.ful_name}</B></TD></TR>'
             if node.is_entity:
                 label += f'<TR><TD ALIGN="RIGHT">:name</TD><TD ALIGN="LEFT">{node.entity_name}</TD></TR>'
-                if show_wiki and node.wiki:
-                    label += f'<TR><TD ALIGN="RIGHT">:wiki</TD><TD ALIGN="LEFT">{node.wiki}</TD></TR>'
+            if show_wiki and (node.wikititle or node.wikiid):
+                wikilabel = f"{node.wikititle or 'unk'}"
+                if node.wikiid:
+                    wikilabel += f" <SUB>{node.wikiid}</SUB>"
+                label += f'<TR><TD ALIGN="RIGHT">:wiki</TD><TD ALIGN="LEFT">{wikilabel}</TD></TR>'
             if node.polarity:
                 label += '<TR><TD COLSPAN="2">- polarity</TD></TR>'
             for k,v in node.attrs.items():

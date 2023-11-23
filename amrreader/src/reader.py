@@ -5,10 +5,14 @@ import re
 import copy
 import urllib.parse
 import uuid
+import logging
+
+import requests
 
 from .models.Node import Node
 from .models.Sentence import Sentence
 
+WIKIDATA_URL = "https://www.wikidata.org/w/api.php?action=wbgetentities&format=json"
 
 def split_amr(raw_amr, contents):
     '''
@@ -43,6 +47,47 @@ def collect_acronyms(content, amr_nodes_acronym):
         if acr not in amr_nodes_acronym:
             amr_nodes_acronym[acr] = Node(name=acr)
 
+def extract_wiki(attrs):
+    wikititle, wikiid = None, None
+    if ":wiki" not in attrs:
+        return wikititle, wikiid
+    wikivalue = attrs.pop(":wiki")
+    # wikidata ID strored
+    wikivalue = wikivalue.rstrip('"').lstrip('"').strip()
+    if not wikivalue:
+        return wikititle, wikiid
+    if re.match(r'[QPL]\d+', wikivalue):
+        wikiid = wikivalue
+        try:
+            response = requests.get(WIKIDATA_URL, params={"ids": wikiid})
+            data = response.json()
+            wiki_labels = data["entities"][wikiid]["labels"]
+            # English title as default
+            if "en" in wiki_labels:
+                wikititle = wiki_labels["en"]["value"]
+            # any title otherwise
+            elif wiki_labels:
+                wikititle = list(wiki_labels.values())[0]
+            wikititle = wikititle.replace(" ", "_")
+        except requests.exceptions.RequestException as e:
+            logging.warning(f"Error when retrieving data from WikiData for the id={wikiid}: {e}")
+        except KeyError:
+            logging.warning(f"Error when retrieving data from WikiData for the id={wikiid}: id does not exist")
+    # wiki title stored or invalid format
+    else:
+        wikititle = urllib.parse.unquote_plus(wikivalue)
+    return wikititle, wikiid
+
+def extract_ne_name(content):
+    names = re.findall(':op\d\s\"\S+\"', content)
+    if not names:
+        return
+    entity_name = ''
+    for i in names:
+        entity_name += re.match(':op\d\s\"(\S+)\"', i).group(1) + ' '
+    entity_name = urllib.parse.unquote_plus(entity_name.strip())
+    return entity_name
+
 def generate_node_single(content, amr_nodes_content, amr_nodes_acronym):
     '''
     Generate Node object for single '()'
@@ -75,8 +120,6 @@ def generate_node_single(content, amr_nodes_content, amr_nodes_acronym):
         i = re.search('(:\S+)\s(\S+)', i)
         role = i.group(1)
         concept = i.group(2).strip(')')
-        if role == ':wiki':
-            continue
         if role == ':polarity':
             continue
         if concept in amr_nodes_acronym:
@@ -91,25 +134,17 @@ def generate_node_single(content, amr_nodes_content, amr_nodes_acronym):
         node.edge_label = role
         arg_nodes.append(node)
 
-    # Node is a named entity
-    names = re.findall(':op\d\s\"\S+\"', content)
-    if len(names) > 0:
-        entity_name = ''
-        for i in names:
-            entity_name += re.match(':op\d\s\"(\S+)\"', i).group(1) + ' '
-        entity_name = urllib.parse.unquote_plus(entity_name.strip())
-        new_node = amr_nodes_acronym[acr]
-        new_node.set_all(name=acr, ful_name=ful, next_nodes=arg_nodes,
-                        entity_name=entity_name,
-                        polarity=is_polarity, content=content, attrs=attrs)
-        amr_nodes_content[content] = new_node
-        amr_nodes_acronym[acr] = new_node
-    else:
-        new_node = amr_nodes_acronym[acr]
-        new_node.set_all(name=acr, ful_name=ful, next_nodes=arg_nodes,
-                        polarity=is_polarity, content=content, attrs=attrs)
-        amr_nodes_content[content] = new_node
-        amr_nodes_acronym[acr] = new_node
+    # Node contains a wiki link
+    wikititle, wikiid = extract_wiki(attrs)
+
+    # Node is the name of a NE
+    ne_name = extract_ne_name(content)
+
+    new_node = amr_nodes_acronym[acr]
+    new_node.set_all(name=acr, ful_name=ful, next_nodes=arg_nodes,
+                    wikititle=wikititle, wikiid=wikiid, entity_name=ne_name,
+                    polarity=is_polarity, content=content, attrs=attrs)
+    amr_nodes_content[content] = new_node
 
 
 def generate_nodes_multiple(content, amr_nodes_content, amr_nodes_acronym):
@@ -163,8 +198,6 @@ def generate_nodes_multiple(content, amr_nodes_content, amr_nodes_acronym):
         i = re.search('(:\S+)\s(\S+)', i)
         role = i.group(1)
         concept = i.group(2).strip(')')
-        if role == ':wiki' and is_named_entity:
-            continue
         if role == ':polarity':
             continue
         if concept in amr_nodes_acronym:
@@ -179,42 +212,29 @@ def generate_nodes_multiple(content, amr_nodes_content, amr_nodes_acronym):
         node.edge_label = role
         arg_nodes.append(node)
 
-        # Named entity is a special node, so the subtree of a
-        # named entity will be merged. For example,
-        #     (p / person :wiki -
-        #        :name (n / name
-        #                 :op1 "Pascale"))
-        # will be merged as one node.
-        # According to AMR Specification, "we fill the :instance
-        # slot from a special list of standard AMR named entity types".
-        # Thus, for named entity node, we will use entity type
-        # (p / person in the example above) instead of :instance
+    # Node contains a wiki link
+    wikititle, wikiid = extract_wiki(attrs)
 
+    # a "multiple" node must be either a NE or have children
+    assert(is_named_entity != bool(arg_nodes))
+
+    # Named entity is a special node, so the subtree of a
+    # named entity will be merged. For example,
+    #     (p / person :wiki -
+    #        :name (n / name
+    #                 :op1 "Pascale"))
+    # will be merged as one node.
+    edge_label, entity_name, entity_type = None, None, None
     if is_named_entity:
-        # Get Wikipedia title:
-        if re.match('.+:wiki\s-.*', content):
-            wikititle = '-' # Entity is NIL, Wiki title does not exist
-        else:
-            m = re.search(':wiki\s\"(.+?)\"', content)
-            if m:
-                wikititle = urllib.parse.unquote_plus(m.group(1)) # Wiki title
-            else:
-                wikititle = '' # There is no Wiki title information
+        edge_label, entity_name, entity_type = ne.ful_name, ne.entity_name, ful
 
-        new_node = amr_nodes_acronym[acr]
-        new_node.set_all(name=acr, ful_name=ful, next_nodes=arg_nodes,
-                        edge_label=ne.ful_name, is_entity=True,
-                        entity_type=ful, entity_name=ne.entity_name,
-                        wiki=wikititle, polarity=is_polarity, content=content, attrs=attrs)
-        amr_nodes_content[_content] = new_node
-        amr_nodes_acronym[acr] = new_node
-
-    elif len(arg_nodes) > 0:
-        new_node = amr_nodes_acronym[acr]
-        new_node.set_all(name=acr, ful_name=ful, next_nodes=arg_nodes,
-                        polarity=is_polarity, content=content, attrs=attrs)
-        amr_nodes_content[_content] = new_node
-        amr_nodes_acronym[acr] = new_node
+    new_node = amr_nodes_acronym[acr]
+    amr_nodes_content[_content] = new_node
+    new_node.set_all(name=acr, ful_name=ful, next_nodes=arg_nodes,
+                    edge_label=edge_label,
+                    wikititle=wikititle, wikiid=wikiid,
+                    is_entity=is_named_entity, entity_type=entity_type, entity_name=entity_name,
+                    polarity=is_polarity, content=content, attrs=attrs)
 
 
 def revise_node(content, amr_nodes_content, amr_nodes_acronym):
