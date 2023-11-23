@@ -67,7 +67,7 @@ def extract_wiki(attrs):
                 wikititle = wiki_labels["en"]["value"]
             # any title otherwise
             elif wiki_labels:
-                wikititle = list(wiki_labels.values())[0]
+                wikititle = list(wiki_labels.values())[0]["value"]
             wikititle = wikititle.replace(" ", "_")
         except requests.exceptions.RequestException as e:
             logging.warning(f"Error when retrieving data from WikiData for the id={wikiid}: {e}")
