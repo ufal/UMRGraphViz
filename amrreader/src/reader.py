@@ -215,9 +215,6 @@ def generate_nodes_multiple(content, amr_nodes_content, amr_nodes_acronym):
     # Node contains a wiki link
     wikititle, wikiid = extract_wiki(attrs)
 
-    # a "multiple" node must be either a NE or have children
-    assert(is_named_entity != bool(arg_nodes))
-
     # Named entity is a special node, so the subtree of a
     # named entity will be merged. For example,
     #     (p / person :wiki -
@@ -227,6 +224,10 @@ def generate_nodes_multiple(content, amr_nodes_content, amr_nodes_acronym):
     edge_label, entity_name, entity_type = None, None, None
     if is_named_entity:
         edge_label, entity_name, entity_type = ne.ful_name, ne.entity_name, ful
+
+    # if a "multiple" node is not NE, it has to have some children
+    assert is_named_entity or bool(arg_nodes), \
+            f"Concept with embedded bracketing must be a NE or must have some children"
 
     new_node = amr_nodes_acronym[acr]
     amr_nodes_content[_content] = new_node
