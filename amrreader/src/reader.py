@@ -41,7 +41,7 @@ def split_amr(raw_amr, contents):
 
 
 def collect_acronyms(content, amr_nodes_acronym):
-    predict_event = re.search('(\w+)\s*/\s\S+', content)
+    predict_event = re.search('(\w+)\s*/\s*\S+', content)
     if predict_event:
         acr = predict_event.group(1) # Acronym
         if acr not in amr_nodes_acronym:
@@ -101,12 +101,11 @@ def generate_node_single(content, amr_nodes_content, amr_nodes_acronym):
     except AssertionError:
         raise Exception('Unmatched parenthesis')
 
-    predict_event = re.search('(\w+)\s*/\s(\S+)', content)
-    if predict_event:
-        acr = predict_event.group(1) # Acronym
-        ful = predict_event.group(2).strip(')') # Full name
-    else:
-        acr, ful = '-', '-'
+    predict_event = re.search('(\w+)\s*/\s*(\S+)', content)
+    if not predict_event:
+        return
+    acr = predict_event.group(1) # Acronym
+    ful = predict_event.group(2).strip(')') # Full name
 
     # In case of :polarity -
     is_polarity = True if re.search(":polarity\s-", content) else False
@@ -180,12 +179,11 @@ def generate_nodes_multiple(content, amr_nodes_content, amr_nodes_acronym):
             else:
                 arg_nodes.append(amr_nodes_content[i])
 
-    predict_event = re.search('(\w+)\s*/\s(\S+)', content)
-    if predict_event:
-        acr = predict_event.group(1) # Acronym
-        ful = predict_event.group(2) # Full name
-    else:
-        acr, ful = '-', '-'
+    predict_event = re.search('(\w+)\s*/\s*(\S+)', content)
+    if not predict_event:
+        return
+    acr = predict_event.group(1) # Acronym
+    ful = predict_event.group(2) # Full name
 
     #print(f"{acr} {ful}")
 
