@@ -49,7 +49,7 @@ class Node(object):
         for k,v in self.attrs.items():
             s += f"ATTRS/{k}: {v}\n"
 
-        s = 'LINK TO:\n'
+        s += 'LINK TO:\n'
         for i in self.next_nodes:
             if not i.ful_name:
                 s += f"\t({i.edge_label}) -> {i.name}\n"
