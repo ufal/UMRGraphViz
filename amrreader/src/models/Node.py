@@ -55,4 +55,5 @@ class Node(object):
                 s += f"\t({i.edge_label}) -> {i.name}\n"
             else:
                 s += f"\t({i.edge_label}) -> {i.name} / {i.ful_name}\n"
+        return s
 
