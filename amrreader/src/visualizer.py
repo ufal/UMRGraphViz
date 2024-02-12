@@ -87,7 +87,7 @@ def visualizer_curt(sen, outdir, show_wiki=True):
 
     # Draw nodes
     G = pgv.AGraph(strict=False, directed=True)
-    for i in nodes:
+    for i in sorted(nodes):
         if i == '@': # Root
             continue
         node = sen.amr_nodes[i]
