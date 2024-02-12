@@ -70,9 +70,9 @@ def extract_wiki(attrs):
                 wikititle = list(wiki_labels.values())[0]["value"]
             wikititle = wikititle.replace(" ", "_")
         except requests.exceptions.RequestException as e:
-            logging.warning(f"Error when retrieving data from WikiData for the id={wikiid}: {e}")
+            logging.warning(f"Failed in retrieving data from WikiData for the id={wikiid}: {e}")
         except KeyError:
-            logging.warning(f"Error when retrieving data from WikiData for the id={wikiid}: id does not exist")
+            logging.warning(f"Failed in retrieving data from WikiData for the id={wikiid}: id does not exist")
     # wiki title stored or invalid format
     else:
         wikititle = urllib.parse.unquote_plus(wikivalue)
