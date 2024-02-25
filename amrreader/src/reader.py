@@ -351,6 +351,7 @@ def main(raw_amrs):
     raw_umr, sent_umr, doc_umr = '', '', ''
     sent_stack_count, doc_stack_count = None, None
     sent_info_block = False
+    in_align_block, align_info = False, []
     for line in raw_amrs.split('\n'):
 
         # try to extract sentid
@@ -361,12 +362,13 @@ def main(raw_amrs):
                 if sentid and sent_umr:
                     amr_nodes_acronym, path = amr_reader(sent_umr)
                     sent_obj = Sentence(sentid, sent, sent_info, raw_umr, sent_umr,
-                                    amr_nodes_acronym, path)
+                                    align_info, amr_nodes_acronym, path)
                     res.append(sent_obj)
                 sentid, sent, sent_info = l_sentid, None, ''
                 raw_umr, sent_umr, doc_umr = '', '', ''
                 sent_stack_count, doc_stack_count = None, None
                 sent_info_block = True
+                in_align_block, align_info = False, []
 
         # skip all lines until the first sentid is defined
         if not sentid:
@@ -398,6 +400,18 @@ def main(raw_amrs):
             if sent_stack_count > 0:
                 continue
 
+        # entering the alignment block
+        if re.match(r'#\s*alignment', line):
+            in_align_block = True
+            continue
+        # processing inside the alignment block (until an empty line is encountered)
+        if in_align_block:
+            if line.strip():
+                align_info.append(line)
+            else:
+                in_align_block = False
+            continue
+
         # detect bracketed structure of a doc graph
         # skip if the doc graph hasn't started yet
         if doc_stack_count is None and not line.startswith('('):
@@ -413,7 +427,7 @@ def main(raw_amrs):
     if sentid and sent_umr:
         amr_nodes_acronym, path = amr_reader(sent_umr)
         sent_obj = Sentence(sentid, sent, sent_info, raw_umr, sent_umr,
-                        amr_nodes_acronym, path)
+                        align_info, amr_nodes_acronym, path)
         res.append(sent_obj)
 
     return res

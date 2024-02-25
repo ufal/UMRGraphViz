@@ -93,6 +93,8 @@ def visualizer_curt(sen, outdir, show_wiki=True):
         node = sen.amr_nodes[i]
         if node.ful_name:
             label = '<<TABLE BORDER="0" CELLBORDER="0">'
+            if (aligned_text := sen.aligned_text[i]):
+                label += f'<TR><TD COLSPAN="2"><I><FONT COLOR="orchid3">{aligned_text}</FONT></I></TD></TR>'
             label += f'<TR><TD COLSPAN="2"><B>{node.ful_name}</B></TD></TR>'
             if node.is_entity:
                 label += f'<TR><TD ALIGN="RIGHT">:name</TD><TD ALIGN="LEFT">{node.entity_name}</TD></TR>'
