@@ -15,16 +15,16 @@ class Sentence(object):
         self.raw_umr = raw_umr       # Full raw UMR
         self.sent_umr = sent_umr     # Sent part of UMR
         self.amr_nodes = amr_nodes   # AMR ndoes table
-        self.aligned_text = self._aligned_token_idx_to_text(align_info, self.tokens) # node-token alignmnent
+        self.aligned_ords = self._aligned_token_idx_to_ords(align_info, len(self.tokens)) # node-token_ord alignmnent
         self.graph = graph           # Path of the whole graph
         self.amr_paths = dict()      # AMR paths
         self.named_entities = dict() # Named entities
 
-    def _aligned_token_idx_to_text(self, align_info, tokens):
-        aligned_text = {}
+    def _aligned_token_idx_to_ords(self, align_info, token_count):
+        all_aligned_ords = {}
         for line in align_info:
             var, token_range_str = line.split(":")
-            aligned_tokens = []
+            aligned_ords = []
             for range_str in token_range_str.split(","):
                 range_elems = range_str.strip().split("-", 2)
                 # skip "-1--1" alignments
@@ -39,12 +39,16 @@ class Sentence(object):
                     logging.warn(f"Descending alignment range, skipping: {line}")
                     continue
                 # warn if the end is out of range
-                if range_elems[1] > len(tokens):
+                if range_elems[1] > token_count:
                     logging.warn(f"Alignment range out of scope (tokens = {len(tokens)}), skipping: {line}")
                     continue
-                aligned_tokens.extend(tokens[range_elems[0]-1:range_elems[1]])
-            aligned_text[var] = " ".join(aligned_tokens)
-        return aligned_text
+                aligned_ords.extend(range(range_elems[0]-1, range_elems[1]))
+            all_aligned_ords[var] = aligned_ords
+        return all_aligned_ords
 
+    # TODO this should be moved to models.Node
+    def get_aligned_text(self, node_id):
+        return " ".join([self.tokens[ordnum] for ordnum in self.aligned_ords[node_id]])
+    
     def __str__(self):
         return '%s%s\n' % (self.sent_info, self.sent_umr)

@@ -1,5 +1,7 @@
+from collections import defaultdict
 import re
 import pygraphviz as pgv
+
 
 
 def visualizer(sent, outdir, show_wiki=True):
@@ -68,6 +70,20 @@ def visualizer(sent, outdir, show_wiki=True):
     G.draw('%s/%s.png' % (outdir, sent.sentid))
 
 
+def layout_by_ord(graph, ord_dict=None):
+    layers_by_y = defaultdict(list)
+    for node in graph:
+        axes_str_list = node.attr["pos"].split(",")
+        node_feats = {
+            "name": node.name,
+            "x": float(axes_str_list[0]),
+            "y": float(axes_str_list[1]),
+            "width": float(node.attr["width"]),
+            "ords": ord_dict[node.name]
+        }
+        layers_by_y[axes_str_list[1]].append(node_feats)
+    print(f"{layers_by_y = }")
+
 def visualizer_curt(sen, outdir, show_wiki=True):
     '''
     AMR visualizer simplified graph
@@ -87,13 +103,13 @@ def visualizer_curt(sen, outdir, show_wiki=True):
 
     # Draw nodes
     G = pgv.AGraph(strict=False, directed=True)
-    for i in sorted(nodes):
-        if i == '@': # Root
+    for node_id in sorted(nodes):
+        if node_id == '@': # Root
             continue
-        node = sen.amr_nodes[i]
+        node = sen.amr_nodes[node_id]
         if node.ful_name:
             label = '<<TABLE BORDER="0" CELLBORDER="0">'
-            if (aligned_text := sen.aligned_text[i]):
+            if (aligned_text := sen.get_aligned_text(node_id)):
                 label += f'<TR><TD COLSPAN="2"><I><FONT COLOR="orchid3">{aligned_text}</FONT></I></TD></TR>'
             label += f'<TR><TD COLSPAN="2"><B>{node.ful_name}</B></TD></TR>'
             if node.is_entity:
@@ -110,16 +126,16 @@ def visualizer_curt(sen, outdir, show_wiki=True):
             label += '</TABLE>>'
             # 1. Node is a named entity
             if node.is_entity:
-                G.add_node(i, shape='box', color='blue', label=label)
+                G.add_node(node_id, shape='box', color='blue', label=label)
             # 2. Node is an instance
             else:
                 if re.match('\S+-\d+', node.ful_name): # Node has sense tag
-                    G.add_node(i, shape='egg', color='orange', label=label)
+                    G.add_node(node_id, shape='egg', color='orange', label=label)
                 else:
-                    G.add_node(i, shape='egg', color='green', label=label)
+                    G.add_node(node_id, shape='egg', color='green', label=label)
         # 3. Node is a concept
         else:
-            G.add_node(i, shape='ellipse', color='black')
+            G.add_node(node_id, shape='ellipse', color='black')
 
     # Draw edge label
     for i in sen.graph:
@@ -127,6 +143,12 @@ def visualizer_curt(sen, outdir, show_wiki=True):
             continue
         G.add_edge(i[0], i[1], label=i[2], fontname='monospace')
 
-    G.layout()
     G.layout(prog='dot')
+    #G.has_layout = True
+
+    #layout_by_ord(G, sen.aligned_ords)
+
+    #for G_node in G:
+    #    print(f"{G_node.attr.to_dict() = }")
+
     G.draw('%s/%s.png' % (outdir, sen.sentid))
