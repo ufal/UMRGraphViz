@@ -2,12 +2,12 @@ from collections import defaultdict
 import logging
 
 # must convert between px and inches as positions are defined in pixels whereas width in inches
-PIXELS_IN_INCH=96
+POINTS_PER_INCH=72
 GAP = 0
 ORD_OFFSET = 20
 
 def get_right_border(node):
-    width = float(node.attr["width"]) * PIXELS_IN_INCH
+    width = float(node.attr["width"]) * POINTS_PER_INCH
     x, _ = [float(coord) for coord in node.attr["pos"].split(",", 2)]
     return x + width
 
@@ -44,7 +44,7 @@ def sort_and_group_nodes_by_ord(ords_by_nodeid, graph):
     return [groups[cumul_ord] for cumul_ord in sorted(groups.keys())]
 
 def min_x_center(node, xmin_by_level):
-    width = float(node.attr["width"]) * PIXELS_IN_INCH
+    width = float(node.attr["width"]) * POINTS_PER_INCH
     logging.debug(f"WIDTH of {node}: {width}")
     return xmin_by_level[get_y_str(node)] + width / 2
 
@@ -55,7 +55,7 @@ def find_x_center(nodes, prev_x_center, xmin_by_level):
 
 def position_node_by_x(node, x_center):
     precision_tag = ".2f"
-    width = float(node.attr["width"]) * PIXELS_IN_INCH
+    width = float(node.attr["width"]) * POINTS_PER_INCH
     x = x_center - width / 2
     y_str = get_y_str(node)
     pos_value = f"{x:{precision_tag}},{y_str}"
