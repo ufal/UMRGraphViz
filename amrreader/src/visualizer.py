@@ -2,7 +2,7 @@ from collections import defaultdict
 import re
 import pygraphviz as pgv
 
-
+from src import layout
 
 def visualizer(sent, outdir, show_wiki=True):
     '''
@@ -69,21 +69,6 @@ def visualizer(sent, outdir, show_wiki=True):
     G.layout(prog='dot')
     G.draw('%s/%s.png' % (outdir, sent.sentid))
 
-
-def layout_by_ord(graph, ord_dict=None):
-    layers_by_y = defaultdict(list)
-    for node in graph:
-        axes_str_list = node.attr["pos"].split(",")
-        node_feats = {
-            "name": node.name,
-            "x": float(axes_str_list[0]),
-            "y": float(axes_str_list[1]),
-            "width": float(node.attr["width"]),
-            "ords": ord_dict[node.name]
-        }
-        layers_by_y[axes_str_list[1]].append(node_feats)
-    print(f"{layers_by_y = }")
-
 def visualizer_curt(sen, outdir, show_wiki=True):
     '''
     AMR visualizer simplified graph
@@ -143,12 +128,8 @@ def visualizer_curt(sen, outdir, show_wiki=True):
             continue
         G.add_edge(i[0], i[1], label=i[2], fontname='monospace')
 
+    # first layout the graph as tree - this sets up also vertical positions which will not be changed
     G.layout(prog='dot')
-    #G.has_layout = True
-
-    #layout_by_ord(G, sen.aligned_ords)
-
-    #for G_node in G:
-    #    print(f"{G_node.attr.to_dict() = }")
-
+    # layout the tree by ord - this sets up only horizontal positions of nodes
+    layout.layout_graph_by_ord(G, sen.aligned_ords)
     G.draw('%s/%s.png' % (outdir, sen.sentid))
