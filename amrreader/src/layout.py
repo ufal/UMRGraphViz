@@ -25,11 +25,11 @@ def assign_ords_to_nodes(graph, ords_by_nodeid):
         parent_ords = None
         parent_id = node_id
         while not parent_ords:
-            inedge = graph.in_edges(parent_id)[0]
-            if not inedge:
+            inedges = graph.in_edges(parent_id)
+            if not inedges:
                 parent_ords = [0]
                 break
-            parent_id = inedge[0]
+            parent_id = inedges[0][0]
             parent_ords = ords_by_nodeid[parent_id]
         full_ords_by_nodeid[node_id] = parent_ords
     return full_ords_by_nodeid
