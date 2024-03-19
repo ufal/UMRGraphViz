@@ -3,13 +3,13 @@ import logging
 
 # must convert between px and inches as positions are defined in pixels whereas width in inches
 POINTS_PER_INCH=72
-GAP = 0
+GAP = 10
 ORD_OFFSET = 20
 
 def get_right_border(node):
     width = float(node.attr["width"]) * POINTS_PER_INCH
     x, _ = [float(coord) for coord in node.attr["pos"].split(",", 2)]
-    return x + width
+    return x + width / 2
 
 def get_y_str(node):
     _, y_str = [coord for coord in node.attr["pos"].split(",", 2)]
@@ -53,16 +53,16 @@ def find_x_center(nodes, prev_x_center, xmin_by_level):
     calc_x_center = prev_x_center
     return max([calc_x_center, *min_x_centers])
 
-def position_node_by_x(node, x_center):
+def position_node_by_x(node, x):
     precision_tag = ".2f"
     width = float(node.attr["width"]) * POINTS_PER_INCH
-    x = x_center - width / 2
     y_str = get_y_str(node)
     pos_value = f"{x:{precision_tag}},{y_str}"
     node.attr["pos"] = pos_value
 
 def layout_graph_by_ord(graph, ords_by_nodeid):
     # assign ords to nodes with no alignment: copy the values from their parents or [0]
+    logging.debug(f"{ords_by_nodeid = }")
     ords_by_nodeid = assign_ords_to_nodes(graph, ords_by_nodeid)
     # create a list of node ids sorted and grouped by their cumulated ord value
     ordered_grouped_nodes = sort_and_group_nodes_by_ord(ords_by_nodeid, graph)
